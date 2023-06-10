@@ -5,6 +5,7 @@ import de.maxhenkel.status.events.PlayerEvents;
 import de.maxhenkel.status.net.NetManager;
 import de.maxhenkel.status.net.PlayerStatePacket;
 import de.maxhenkel.status.net.PlayerStatesPacket;
+import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket;
 import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
@@ -25,10 +26,41 @@ public class PlayerStateManager {
         PlayerEvents.PLAYER_LOGGED_IN.register(this::notifyPlayer);
         PlayerEvents.PLAYER_SLEEP.register(this::onSleep);
 
-        NetManager.registerServerReceiver(PlayerStatePacket.class, (server, player, handler, responseSender, packet) -> {
+        NetManager.registerServerReceiver(PlayerStatePacket.class, (server, changedplayer, handler, responseSender, packet) -> {
             PlayerState state = packet.getPlayerState();
-            state.setPlayer(player.getUUID());
-            states.put(player.getUUID(), state);
+
+            var insomniacCount = getNoSleepPlayers(server).size();
+
+            if (states.containsKey(changedplayer.getUUID()) && state.isNoSleep() != states.get(changedplayer.getUUID()).isNoSleep()) {
+                for (var player : server.getPlayerList().getPlayers()) {
+                    if (state.isNoSleep()) {
+                        player.sendSystemMessage(changedplayer.getDisplayName().copy()
+                                .append(" doesn't want anyone to sleep. " + (insomniacCount+1) + " total players don't want sleep.")
+                                .withStyle(ChatFormatting.RED)
+                        );
+                    }
+                    else {
+                        player.sendSystemMessage(changedplayer.getDisplayName().copy()
+                                .append(" is ok with people sleeping now.")
+                                .withStyle(ChatFormatting.GREEN)
+                        );
+                        if (insomniacCount-1 <= 0) {
+                            player.sendSystemMessage(Component.literal("Players are free to sleep now.")
+                                    .withStyle(ChatFormatting.GREEN)
+                            );
+                        }
+                        else {
+                            player.sendSystemMessage(Component.literal("There's still " + (insomniacCount-1) + " players requesting no sleep.")
+                                    .withStyle(ChatFormatting.RED)
+                            );
+                        }
+
+                    }
+                }
+            }
+
+            state.setPlayer(changedplayer.getUUID());
+            states.put(changedplayer.getUUID(), state);
             broadcastState(server, state);
         });
     }
