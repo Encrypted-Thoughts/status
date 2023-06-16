@@ -45,7 +45,7 @@ public class PlayerStateManager {
                                 .withStyle(ChatFormatting.GREEN)
                         );
                         if (insomniacCount-1 <= 0) {
-                            player.sendSystemMessage(Component.literal("Players are free to sleep now.")
+                            player.sendSystemMessage(Component.literal("Players are free to sleep.")
                                     .withStyle(ChatFormatting.GREEN)
                             );
                         }
